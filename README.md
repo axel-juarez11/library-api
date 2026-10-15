@@ -11,8 +11,8 @@ fechas de devolución y multas por retraso.
 - Docker
 
 ## Cómo correrlo
-1. Levanta la base de datos: 'docker compose up -d'
-2. Ejecuta la aplicación: './mvnw spring-boot:run'
+1. Levanta la base de datos: ´docker compose up -d´
+2. Ejecuta la aplicación: ´./mvnw spring-boot:run´
 
 ## Estado del proyecto
 En desarrollo.
