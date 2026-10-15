@@ -1,0 +1,14 @@
+spring:
+  application:
+    name: library-api
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5433/library}
+    username: ${DB_USER:library_user}
+    password: ${DB_PASSWORD:library_pass}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
