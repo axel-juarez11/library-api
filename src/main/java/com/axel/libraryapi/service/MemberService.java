@@ -7,7 +7,6 @@ import com.axel.libraryapi.exception.DuplicateResourceException;
 import com.axel.libraryapi.exception.ResourceNotFoundException;
 import com.axel.libraryapi.repository.MemberRepository;
 import lombok.RequiredArgsConstructor;
-import org.hibernate.metamodel.model.domain.internal.MapMember;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
@@ -53,7 +52,7 @@ public class MemberService {
     public MemberResponse update(Long id, MemberRequest request){
         Member member = getMember(id);
         String email = normalize(request.email());
-        if (memberRepository.existsByEmailAndIdNOt(email, id)){
+        if (memberRepository.existsByEmailAndIdNot(email, id)){
             throw new DuplicateResourceException("Ya existe un socio con el correo " + email);
         }
         member.setName(request.name().trim());
