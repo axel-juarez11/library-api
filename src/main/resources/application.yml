@@ -12,3 +12,6 @@ spring:
     properties:
       hibernate:
         format_sql: true
+library:
+  loan-days: 7
+  max-active-loans: 3
