@@ -12,9 +12,9 @@ import com.axel.libraryapi.repository.BookRepository;
 import com.axel.libraryapi.repository.LoanRepository;
 import com.axel.libraryapi.repository.MemberRepository;
 import lombok.RequiredArgsConstructor;
-import lombok.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.beans.factory.annotation.Value;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -26,10 +26,10 @@ public class LoanService {
     private final BookRepository bookRepository;
     private final MemberRepository memberRepository;
 
-    @Value("{library.loan-days:7}")
+    @Value("${library.loan-days:7}")
     private int loanDays;
 
-    @Value("{library.max-active-loans:3}")
+    @Value("${library.max-active-loans:3}")
     private int maxActiveLoans;
 
     @Transactional
@@ -98,7 +98,7 @@ public class LoanService {
     }
 
     @Transactional(readOnly = true)
-    public List<LoanResponse> findById(Long id){
+    public LoanResponse findById(Long id){
         Loan loan = loanRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Prestamo no encontrado con id " + id));
         return LoanResponse.from(loan, LocalDate.now());
