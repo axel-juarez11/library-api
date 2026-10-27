@@ -3,8 +3,10 @@ package com.axel.libraryapi.service;
 import com.axel.libraryapi.dto.MemberRequest;
 import com.axel.libraryapi.dto.MemberResponse;
 import com.axel.libraryapi.entity.Member;
+import com.axel.libraryapi.exception.BusinessRuleException;
 import com.axel.libraryapi.exception.DuplicateResourceException;
 import com.axel.libraryapi.exception.ResourceNotFoundException;
+import com.axel.libraryapi.repository.LoanRepository;
 import com.axel.libraryapi.repository.MemberRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -17,6 +19,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class MemberService {
     private final MemberRepository memberRepository;
+    private final LoanRepository loanRepository;
 
     @Transactional
     public MemberResponse create(MemberRequest request){
@@ -63,6 +66,10 @@ public class MemberService {
 
     @Transactional
     public MemberResponse setActive(Long id, boolean active){
+        if (!active && loanRepository.countByMemberIdAndReturnedAtIsNull(id) > 0){
+            throw new BusinessRuleException("No se puede desactivar a un socio con préstamos activos");
+        }
+
         Member member = getMember(id);
         member.setActive(active);
         return MemberResponse.from(memberRepository.save(member));
