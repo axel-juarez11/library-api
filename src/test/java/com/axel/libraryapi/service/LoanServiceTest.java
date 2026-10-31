@@ -101,6 +101,55 @@ class LoanServiceTest {
                 .isInstanceOf(ResourceNotFoundException.class);
     }
 
+    @Test
+    void borrow_memberAtMaxActiveLoans_throwsBusinessRule(){
+        when(memberRepository.findById(1L)).thenReturn(Optional.of(member));
+        when(bookRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(book));
+        when(loanRepository.countByMemberIdAndReturnedAtIsNull(1L)).thenReturn(3L);
+
+        assertThatThrownBy(() -> loanService.borrow(new LoanRequest(1L, 1L)))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("máximo");
+
+        verify(loanRepository, never()).save(any());
+    }
+
+    @Test
+    void borrow_memberHasOverdueLoans_throwsBusinessRule(){
+        when(memberRepository.findById(1L)).thenReturn(Optional.of(member));
+        when(bookRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(book));
+        when(loanRepository.existsByMemberIdAndReturnedAtIsNullAndDueDateBefore(any(), any())).thenReturn(true);
+
+        assertThatThrownBy(() -> loanService.borrow(new LoanRequest(1L, 1L)))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("vencidos");
+        verify(loanRepository, never()).save(any());
+    }
+
+    @Test
+    void borrow_bookAlreadyBorrowedByMember_throwsBusinessRule(){
+        when(memberRepository.findById(1L)).thenReturn(Optional.of(member));
+        when(bookRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(book));
+        when(loanRepository.existsByMemberIdAndBookIdAndReturnedAtIsNull(1L, 1L)).thenReturn(true);
+
+        assertThatThrownBy(() -> loanService.borrow(new LoanRequest(1L, 1L)))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("ya tiene prestado");
+        verify(loanRepository, never()).save(any());
+    }
+
+    @Test
+    void borrow_bookNotFound_throwsNotFound(){
+        when(memberRepository.findById(1L)).thenReturn(Optional.of(member));
+        when(bookRepository.findByIdForUpdate(99L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> loanService.borrow(new LoanRequest(99L, 1L)))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessageContaining("no encontrado");
+        
+        verify(loanRepository, never()).save(any());
+    }
+
     //returnLoan
     @Test
     void returnLoan_success_incrementsCopiesAndSetsReturnDate(){
