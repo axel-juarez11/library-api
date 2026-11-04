@@ -15,3 +15,4 @@ spring:
 library:
   loan-days: 7
   max-active-loans: 3
+  fine-per-day: 5.00
