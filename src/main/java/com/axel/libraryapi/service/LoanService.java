@@ -32,6 +32,8 @@ public class LoanService {
     @Value("${library.max-active-loans:3}")
     private int maxActiveLoans;
 
+    private final FineService fineService;
+
     @Transactional
     public LoanResponse borrow(LoanRequest request){
         LocalDate today = LocalDate.now();
@@ -58,6 +60,10 @@ public class LoanService {
 
         if (loanRepository.existsByMemberIdAndReturnedAtIsNullAndDueDateBefore(member.getId(), today)){
             throw new BusinessRuleException("El socio tiene préstamos vencidos sin devolver");
+        }
+
+        if (fineService.hasUnpaidFines(member.getId())) {
+            throw new BusinessRuleException("El socio tiene multas pendientes de pago");
         }
 
         if (loanRepository.existsByMemberIdAndBookIdAndReturnedAtIsNull(member.getId(), book.getId())){
@@ -93,6 +99,7 @@ public class LoanService {
 
         book.setAvailableCopies(book.getAvailableCopies() + 1);
         loan.setReturnedAt(today);
+        fineService.createFineIfOverdue(loan);
 
         return LoanResponse.from(loan, today);
     }
