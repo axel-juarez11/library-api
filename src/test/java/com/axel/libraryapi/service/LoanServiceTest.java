@@ -33,6 +33,7 @@ class LoanServiceTest {
     @Mock private LoanRepository loanRepository;
     @Mock private BookRepository bookRepository;
     @Mock private MemberRepository memberRepository;
+    @Mock private FineService fineService;
 
     @InjectMocks private LoanService loanService;
 
@@ -150,6 +151,19 @@ class LoanServiceTest {
         verify(loanRepository, never()).save(any());
     }
 
+    @Test
+    void borrow_memberHasUnpaidFines_throwsBusinessRule(){
+        when(memberRepository.findById(1L)).thenReturn(Optional.of(member));
+        when(bookRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(book));
+        when(fineService.hasUnpaidFines(1L)).thenReturn(true);
+
+        assertThatThrownBy(() -> loanService.borrow(new LoanRequest(1L, 1L)))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("multas pendientes");
+
+        verify(loanRepository, never()).save(any());
+    }
+
     //returnLoan
     @Test
     void returnLoan_success_incrementsCopiesAndSetsReturnDate(){
@@ -165,6 +179,7 @@ class LoanServiceTest {
         assertThat(book.getAvailableCopies()).isEqualTo(3);
         assertThat(loan.getReturnedAt()).isEqualTo(LocalDate.now());
         assertThat(response.status()).isEqualTo(LoanStatus.RETURNED);
+        verify(fineService).createFineIfOverdue(loan);
     }
 
     @Test
