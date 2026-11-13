@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
+import java.time.Clock;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -21,20 +22,21 @@ public class FineService {
 
     private final FineRepository fineRepository;
     private final MemberRepository memberRepository;
+    private final Clock clock;
 
     @Value("${library.fine-per-day:5.00}")
     private BigDecimal finePerDay;
 
     @Transactional
     public void createFineIfOverdue(Loan loan) {
-        long days = loan.daysOverdueOn(LocalDate.now());
+        long days = loan.daysOverdueOn(LocalDate.now(clock));
         if (days <= 0) {
             return;
         }
         Fine fine = Fine.builder()
                 .loan(loan)
                 .amount(finePerDay.multiply(BigDecimal.valueOf(days)))
-                .createdAt(LocalDate.now())
+                .createdAt(LocalDate.now(clock))
                 .paid(false)
                 .build();
         fineRepository.save(fine);
@@ -47,8 +49,9 @@ public class FineService {
 
     @Transactional(readOnly = true)
     public List<FineResponse> findAll(Boolean paid) {
+        LocalDate today = LocalDate.now(clock);
         List<Fine> fines = (paid == null) ? fineRepository.findAll() : fineRepository.findByPaid(paid);
-        return fines.stream().map(FineResponse::from).toList();
+        return fines.stream().map(f -> FineResponse.from(f, today)).toList();
     }
 
     @Transactional(readOnly = true)
@@ -56,20 +59,22 @@ public class FineService {
         if (!memberRepository.existsById(memberId)) {
             throw new ResourceNotFoundException("Socio no encontrado con id " + memberId);
         }
+        LocalDate today = LocalDate.now(clock);
         return fineRepository.findByLoanMemberIdOrderByCreatedAtDesc(memberId).stream()
-                .map(FineResponse::from)
+                .map(f -> FineResponse.from(f, today))
                 .toList();
     }
 
     @Transactional
     public FineResponse pay(Long id) {
+        LocalDate today = LocalDate.now(clock);
         Fine fine = fineRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Multa no encontrada con id " + id));
         if (fine.isPaid()) {
             throw new BusinessRuleException("Esta multa ya fue pagada");
         }
         fine.setPaid(true);
-        fine.setPaidAt(LocalDate.now());
-        return FineResponse.from(fine);
+        fine.setPaidAt(today);
+        return FineResponse.from(fine, today);
     }
 }

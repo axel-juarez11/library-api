@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
+import java.time.Clock;
 import java.time.LocalDate;
 import java.util.Comparator;
 import java.util.List;
@@ -21,6 +22,7 @@ import java.util.stream.Collectors;
 public class ReportService {
 
     private final LoanRepository loanRepository;
+    private final Clock clock;
 
     @Value("${library.fine-per-day:5.00}")
     private BigDecimal finePerDay;
@@ -44,7 +46,7 @@ public class ReportService {
 
     @Transactional(readOnly = true)
     public List<OverdueReportItem> overdue() {
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.now(clock);
 
         return loanRepository.findByReturnedAtIsNullAndDueDateBefore(today).stream()
                 .map(loan -> {

@@ -15,6 +15,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.beans.factory.annotation.Value;
+
+import java.time.Clock;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -33,10 +35,11 @@ public class LoanService {
     private int maxActiveLoans;
 
     private final FineService fineService;
+    private final Clock clock;
 
     @Transactional
     public LoanResponse borrow(LoanRequest request){
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.now(clock);
 
         Member member = memberRepository.findById(request.memberId())
                 .orElseThrow(() -> new ResourceNotFoundException(
@@ -84,7 +87,7 @@ public class LoanService {
 
     @Transactional
     public LoanResponse returnLoan(Long loanId){
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.now(clock);
 
         Loan loan = loanRepository.findById(loanId)
                 .orElseThrow(() -> new ResourceNotFoundException(
@@ -108,12 +111,12 @@ public class LoanService {
     public LoanResponse findById(Long id){
         Loan loan = loanRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Prestamo no encontrado con id " + id));
-        return LoanResponse.from(loan, LocalDate.now());
+        return LoanResponse.from(loan, LocalDate.now(clock));
     }
 
     @Transactional(readOnly = true)
     public List<LoanResponse> findAll(LoanStatus status){
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.now(clock);
         List<Loan> loans;
         if (status == null){
             loans = loanRepository.findAll();
@@ -132,7 +135,7 @@ public class LoanService {
         if (!memberRepository.existsById(memberId)) {
             throw new ResourceNotFoundException("Socio no encontrado con id " + memberId);
         }
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.now(clock);
         return loanRepository.findByMemberIdOrderByLoanDateDesc(memberId).stream()
                 .map(l -> LoanResponse.from(l, today))
                 .toList();

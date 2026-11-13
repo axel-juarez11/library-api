@@ -11,6 +11,8 @@ import com.axel.libraryapi.repository.MemberRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.Clock;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -20,6 +22,7 @@ import java.util.List;
 public class MemberService {
     private final MemberRepository memberRepository;
     private final LoanRepository loanRepository;
+    private final Clock clock;
 
     @Transactional
     public MemberResponse create(MemberRequest request){
@@ -31,7 +34,7 @@ public class MemberService {
                 .name(request.name().trim())
                 .email(email)
                 .phone(request.phone())
-                .registeredAt(LocalDate.now())
+                .registeredAt(LocalDate.now(clock))
                 .active(true)
                 .build();
 
