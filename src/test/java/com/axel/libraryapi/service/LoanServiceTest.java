@@ -16,9 +16,12 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
+import java.time.Clock;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -30,10 +33,15 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class LoanServiceTest {
 
+    private static final LocalDate TODAY = LocalDate.of(2026, 11, 6);
+    private static final ZoneId ZONE = ZoneId.of("America/Mexico_City");
+
     @Mock private LoanRepository loanRepository;
     @Mock private BookRepository bookRepository;
     @Mock private MemberRepository memberRepository;
     @Mock private FineService fineService;
+
+    @Spy private Clock clock = Clock.fixed(TODAY.atTime(12, 0).atZone(ZONE).toInstant(), ZONE);
 
     @InjectMocks private LoanService loanService;
 
@@ -63,7 +71,7 @@ class LoanServiceTest {
         LoanResponse response = loanService.borrow(new LoanRequest(1L, 1L));
 
         assertThat(book.getAvailableCopies()).isEqualTo(2);
-        assertThat(response.dueDate()).isEqualTo(LocalDate.now().plusDays(7));
+        assertThat(response.dueDate()).isEqualTo(TODAY.plusDays(7));
         assertThat(response.status()).isEqualTo(LoanStatus.ACTIVE);
         verify(loanRepository).save(any(Loan.class));
     }
@@ -147,7 +155,7 @@ class LoanServiceTest {
         assertThatThrownBy(() -> loanService.borrow(new LoanRequest(99L, 1L)))
                 .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessageContaining("no encontrado");
-        
+
         verify(loanRepository, never()).save(any());
     }
 
@@ -169,15 +177,15 @@ class LoanServiceTest {
     void returnLoan_success_incrementsCopiesAndSetsReturnDate(){
         book.setAvailableCopies(2);
         Loan loan = Loan.builder().id(10L).book(book).member(member)
-                .loanDate(LocalDate.now().minusDays(2))
-                .dueDate(LocalDate.now().plusDays(5)).build();
+                .loanDate(TODAY.minusDays(2))
+                .dueDate(TODAY.plusDays(5)).build();
         when(loanRepository.findById(10L)).thenReturn(Optional.of(loan));
         when(bookRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(book));
 
         LoanResponse response = loanService.returnLoan(10L);
 
         assertThat(book.getAvailableCopies()).isEqualTo(3);
-        assertThat(loan.getReturnedAt()).isEqualTo(LocalDate.now());
+        assertThat(loan.getReturnedAt()).isEqualTo(TODAY);
         assertThat(response.status()).isEqualTo(LoanStatus.RETURNED);
         verify(fineService).createFineIfOverdue(loan);
     }
@@ -185,9 +193,9 @@ class LoanServiceTest {
     @Test
     void returnLoan_alreadyReturned_throwsBusinessRule(){
         Loan loan = Loan.builder().id(10L).book(book).member(member)
-                .loanDate(LocalDate.now().minusDays(5))
-                .dueDate(LocalDate.now().plusDays(2))
-                .returnedAt(LocalDate.now().minusDays(1)).build();
+                .loanDate(TODAY.minusDays(5))
+                .dueDate(TODAY.plusDays(2))
+                .returnedAt(TODAY.minusDays(1)).build();
         when(loanRepository.findById(10L)).thenReturn(Optional.of(loan));
 
         assertThatThrownBy(() -> loanService.returnLoan(10L))

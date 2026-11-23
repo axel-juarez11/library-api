@@ -11,11 +11,14 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
+import java.time.Clock;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -24,7 +27,13 @@ import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 public class ReportServiceTest {
+
+    private static final LocalDate TODAY = LocalDate.of(2026, 11, 6);
+    private static final ZoneId ZONE = ZoneId.of("America/Mexico_City");
+
     @Mock private LoanRepository loanRepository;
+
+    @Spy private Clock clock = Clock.fixed(TODAY.atTime(12, 0).atZone(ZONE).toInstant(), ZONE);
 
     @InjectMocks private ReportService reportService;
 
@@ -50,7 +59,7 @@ public class ReportServiceTest {
     // mostBorrowed
     @Test
     void mostBorrowed_ranksByTimesBorrowedDescending(){
-        LocalDate due = LocalDate.now().plusDays(3);
+        LocalDate due = TODAY.plusDays(3);
         when(loanRepository.findAll()).thenReturn(List.of(
                 loan(1L, cleanCode, due),
                 loan(2L, effectiveJava, due),
@@ -67,7 +76,7 @@ public class ReportServiceTest {
 
     @Test
     void mostBorrowed_respectsLimit(){
-        LocalDate due = LocalDate.now().plusDays(3);
+        LocalDate due = TODAY.plusDays(3);
         when(loanRepository.findAll()).thenReturn(List.of(
                 loan(1L, cleanCode, due),
                 loan(2L, effectiveJava, due),
@@ -83,13 +92,13 @@ public class ReportServiceTest {
     void mostBorrowed_tieBreaksByTitle(){
         Book zebra = Book.builder().id(1L).title("Zebra").author("A").build();
         Book alpha = Book.builder().id(2L).title("Alpha").author("B").build();
-        LocalDate due = LocalDate.now().plusDays(3);
+        LocalDate due = TODAY.plusDays(3);
         when(loanRepository.findAll()).thenReturn(List.of(
                 loan(1L, zebra, due),
                 loan(2L, alpha, due)));
 
         List<MostBorrowedBookResponse> result = reportService.mostBorrowed(10);
-        
+
         assertThat(result.get(0).title()).isEqualTo("Alpha");
         assertThat(result.get(1).title()).isEqualTo("Zebra");
     }
@@ -97,9 +106,8 @@ public class ReportServiceTest {
     // overdue
     @Test
     void overdue_calculatesDaysAndFine(){
-        LocalDate today = LocalDate.now();
         when(loanRepository.findByReturnedAtIsNullAndDueDateBefore(any(LocalDate.class)))
-                .thenReturn(List.of(loan(1L, cleanCode, today.minusDays(3))));
+                .thenReturn(List.of(loan(1L, cleanCode, TODAY.minusDays(3))));
 
         List<OverdueReportItem> result = reportService.overdue();
 
@@ -110,11 +118,10 @@ public class ReportServiceTest {
 
     @Test
     void overdue_sortsByDaysOverdueDescending(){
-        LocalDate today = LocalDate.now();
         when(loanRepository.findByReturnedAtIsNullAndDueDateBefore(any(LocalDate.class)))
                 .thenReturn(List.of(
-                        loan(1L, cleanCode, today.minusDays(2)),
-                        loan(2L, effectiveJava, today.minusDays(9))));
+                        loan(1L, cleanCode, TODAY.minusDays(2)),
+                        loan(2L, effectiveJava, TODAY.minusDays(9))));
 
         List<OverdueReportItem> result = reportService.overdue();
 

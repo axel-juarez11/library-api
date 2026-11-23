@@ -2,7 +2,6 @@ package com.axel.libraryapi.service;
 
 import com.axel.libraryapi.dto.MemberRequest;
 import com.axel.libraryapi.dto.MemberResponse;
-import com.axel.libraryapi.entity.Loan;
 import com.axel.libraryapi.entity.Member;
 import com.axel.libraryapi.exception.BusinessRuleException;
 import com.axel.libraryapi.exception.DuplicateResourceException;
@@ -14,6 +13,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -21,14 +21,21 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import java.time.Clock;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.Optional;
 
 @ExtendWith(MockitoExtension.class)
 class MemberServiceTest {
 
+    private static final LocalDate TODAY = LocalDate.of(2026, 11, 6);
+    private static final ZoneId ZONE = ZoneId.of("America/Mexico_City");
+
     @Mock private MemberRepository memberRepository;
     @Mock private LoanRepository loanRepository;
+
+    @Spy private Clock clock = Clock.fixed(TODAY.atTime(12, 0).atZone(ZONE).toInstant(), ZONE);
 
     @InjectMocks private MemberService memberService;
 
@@ -41,7 +48,7 @@ class MemberServiceTest {
                 .name("Ana")
                 .email("ana@mail.com")
                 .phone("2721234567")
-                .registeredAt(LocalDate.now())
+                .registeredAt(TODAY)
                 .active(true)
                 .build();
     }
@@ -57,7 +64,7 @@ class MemberServiceTest {
         assertThat(response.email()).isEqualTo("ana@mail.com");
         assertThat(response.name()).isEqualTo("Ana");
         assertThat(response.active()).isTrue();
-        assertThat(response.registeredAt()).isEqualTo(LocalDate.now());
+        assertThat(response.registeredAt()).isEqualTo(TODAY);
     }
 
     @Test

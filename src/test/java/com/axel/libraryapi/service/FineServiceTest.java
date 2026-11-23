@@ -15,11 +15,14 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
+import java.time.Clock;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 
@@ -34,8 +37,13 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 public class FineServiceTest {
 
+    private static final LocalDate TODAY = LocalDate.of(2026, 11, 6);
+    private static final ZoneId ZONE = ZoneId.of("America/Mexico_City");
+
     @Mock private FineRepository fineRepository;
     @Mock private MemberRepository memberRepository;
+
+    @Spy private Clock clock = Clock.fixed(TODAY.atTime(12, 0).atZone(ZONE).toInstant(), ZONE);
 
     @InjectMocks private FineService fineService;
 
@@ -52,9 +60,9 @@ public class FineServiceTest {
 
     private Loan overdueLoan(){
         return Loan.builder().id(10L).book(book).member(member)
-                .loanDate(LocalDate.now().minusDays(10))
-                .dueDate(LocalDate.now().minusDays(3))
-                .returnedAt(LocalDate.now()).build();
+                .loanDate(TODAY.minusDays(10))
+                .dueDate(TODAY.minusDays(3))
+                .returnedAt(TODAY).build();
     }
 
     // createFineIfOverdue
@@ -70,16 +78,16 @@ public class FineServiceTest {
 
         assertThat(saved.getAmount()).isEqualByComparingTo(new BigDecimal("15.00"));
         assertThat(saved.isPaid()).isFalse();
-        assertThat(saved.getCreatedAt()).isEqualTo(LocalDate.now());
+        assertThat(saved.getCreatedAt()).isEqualTo(TODAY);
         assertThat(saved.getLoan()).isSameAs(loan);
     }
 
     @Test
     void createFineIfOverdue_returnedOnTime_doesNotSave(){
         Loan loan = Loan.builder().id(10L).book(book).member(member)
-                .loanDate(LocalDate.now().minusDays(2))
-                .dueDate(LocalDate.now().plusDays(5))
-                .returnedAt(LocalDate.now()).build();
+                .loanDate(TODAY.minusDays(2))
+                .dueDate(TODAY.plusDays(5))
+                .returnedAt(TODAY).build();
 
         fineService.createFineIfOverdue(loan);
 
@@ -99,7 +107,7 @@ public class FineServiceTest {
     void findAll_withoutFilter_returnsAll(){
         Fine fine = Fine.builder().id(5L).loan(overdueLoan())
                 .amount(new BigDecimal("15.00")).paid(false)
-                .createdAt(LocalDate.now()).build();
+                .createdAt(TODAY).build();
         when(fineRepository.findAll()).thenReturn(List.of(fine));
 
         List<FineResponse> result = fineService.findAll(null);
@@ -123,7 +131,7 @@ public class FineServiceTest {
     void findByMember_success_returnsFines(){
         Fine fine = Fine.builder().id(5L).loan(overdueLoan())
                 .amount(new BigDecimal("15.00")).paid(false)
-                .createdAt(LocalDate.now()).build();
+                .createdAt(TODAY).build();
         when(memberRepository.existsById(1L)).thenReturn(true);
         when(fineRepository.findByLoanMemberIdOrderByCreatedAtDesc(1L)).thenReturn(List.of(fine));
 
@@ -148,28 +156,28 @@ public class FineServiceTest {
     void pay_success_marksPaid(){
         Fine fine = Fine.builder().id(5L).loan(overdueLoan())
                 .amount(new BigDecimal("15.00")).paid(false)
-                .createdAt(LocalDate.now()).build();
+                .createdAt(TODAY).build();
         when(fineRepository.findById(5L)).thenReturn(Optional.of(fine));
 
         FineResponse response = fineService.pay(5L);
 
         assertThat(response).isNotNull();
         assertThat(fine.isPaid()).isTrue();
-        assertThat(fine.getPaidAt()).isEqualTo(LocalDate.now());
+        assertThat(fine.getPaidAt()).isEqualTo(TODAY);
     }
 
     @Test
     void pay_alreadyPaid_throwsBusinessRule(){
         Fine fine = Fine.builder().id(5L).loan(overdueLoan())
                 .amount(new BigDecimal("15.00")).paid(true)
-                .paidAt(LocalDate.now().minusDays(1)).build();
+                .paidAt(TODAY.minusDays(1)).build();
         when(fineRepository.findById(5L)).thenReturn(Optional.of(fine));
 
         assertThatThrownBy(() -> fineService.pay(5L))
                 .isInstanceOf(BusinessRuleException.class)
                 .hasMessageContaining("ya fue pagada");
 
-        assertThat(fine.getPaidAt()).isEqualTo(LocalDate.now().minusDays(1));
+        assertThat(fine.getPaidAt()).isEqualTo(TODAY.minusDays(1));
     }
 
     @Test
