@@ -2,14 +2,15 @@ package com.axel.libraryapi.controller;
 
 import com.axel.libraryapi.dto.LoanRequest;
 import com.axel.libraryapi.dto.LoanResponse;
+import com.axel.libraryapi.dto.PageResponse;
 import com.axel.libraryapi.entity.LoanStatus;
 import com.axel.libraryapi.service.LoanService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
@@ -28,8 +29,9 @@ public class LoanController {
     }
 
     @GetMapping("/api/loans")
-    public List<LoanResponse> findAll(@RequestParam(required = false) LoanStatus status){
-        return loanService.findAll(status);
+    public PageResponse<LoanResponse> findAll(@RequestParam(required = false) LoanStatus status,
+                                              Pageable pageable){
+        return loanService.findAll(status, pageable);
     }
 
     @GetMapping("/api/loans/{id}")
@@ -38,7 +40,7 @@ public class LoanController {
     }
 
     @GetMapping("/api/members/{id}/loans")
-    public List<LoanResponse> findByMember(@PathVariable Long id){
-        return loanService.findByMember(id);
+    public PageResponse<LoanResponse> findByMember(@PathVariable Long id, Pageable pageable){
+        return loanService.findByMember(id, pageable);
     }
 }

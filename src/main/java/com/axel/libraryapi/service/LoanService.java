@@ -15,6 +15,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.beans.factory.annotation.Value;
+import com.axel.libraryapi.dto.PageResponse;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.time.Clock;
 import java.time.LocalDate;
@@ -115,29 +118,29 @@ public class LoanService {
     }
 
     @Transactional(readOnly = true)
-    public List<LoanResponse> findAll(LoanStatus status){
+    public PageResponse<LoanResponse> findAll(LoanStatus status, Pageable pageable){
         LocalDate today = LocalDate.now(clock);
-        List<Loan> loans;
+        Page<Loan> loans;
         if (status == null){
-            loans = loanRepository.findAll();
+            loans = loanRepository.findAll(pageable);
         } else {
-             loans = switch (status) {
-                case ACTIVE -> loanRepository.findByReturnedAtIsNullAndDueDateGreaterThanEqual(today);
-                case OVERDUE -> loanRepository.findByReturnedAtIsNullAndDueDateBefore(today);
-                case RETURNED -> loanRepository.findByReturnedAtIsNotNull();
+            loans = switch (status) {
+                case ACTIVE -> loanRepository.findByReturnedAtIsNullAndDueDateGreaterThanEqual(today, pageable);
+                case OVERDUE -> loanRepository.findByReturnedAtIsNullAndDueDateBefore(today, pageable);
+                case RETURNED -> loanRepository.findByReturnedAtIsNotNull(pageable);
             };
         }
-        return loans.stream().map(l -> LoanResponse.from(l, today)).toList();
+        return PageResponse.from(loans.map(l -> LoanResponse.from(l, today)));
     }
 
     @Transactional(readOnly = true)
-    public List<LoanResponse> findByMember(Long memberId) {
+    public PageResponse<LoanResponse> findByMember(Long memberId, Pageable pageable) {
         if (!memberRepository.existsById(memberId)) {
             throw new ResourceNotFoundException("Socio no encontrado con id " + memberId);
         }
         LocalDate today = LocalDate.now(clock);
-        return loanRepository.findByMemberIdOrderByLoanDateDesc(memberId).stream()
-                .map(l -> LoanResponse.from(l, today))
-                .toList();
+        return PageResponse.from(
+                loanRepository.findByMemberIdOrderByLoanDateDesc(memberId, pageable)
+                        .map(l -> LoanResponse.from(l, today)));
     }
 }
