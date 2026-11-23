@@ -2,6 +2,7 @@ package com.axel.libraryapi.service;
 
 import com.axel.libraryapi.dto.BookResponse;
 import com.axel.libraryapi.dto.BookRequest;
+import com.axel.libraryapi.dto.PageResponse;
 import com.axel.libraryapi.entity.Book;
 import com.axel.libraryapi.exception.BusinessRuleException;
 import com.axel.libraryapi.exception.DuplicateResourceException;
@@ -9,6 +10,8 @@ import com.axel.libraryapi.exception.ResourceNotFoundException;
 import com.axel.libraryapi.repository.BookRepository;
 import com.axel.libraryapi.repository.LoanRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -38,16 +41,16 @@ public class BookService {
     }
 
     @Transactional(readOnly = true)
-    public List<BookResponse> findAll(String author, String category){
-        List<Book> books;
+    public PageResponse<BookResponse> findAll(String author, String category, Pageable pageable) {
+        Page<Book> page;
         if (author != null && !author.isBlank()) {
-            books = bookRepository.findByAuthorContainingIgnoreCase(author);
+            page = bookRepository.findByAuthorContainingIgnoreCase(author, pageable);
         } else if (category != null && !category.isBlank()) {
-            books = bookRepository.findByCategoryIgnoreCase(category);
+            page = bookRepository.findByCategoryIgnoreCase(category, pageable);
         } else {
-            books = bookRepository.findAll();
+            page = bookRepository.findAll(pageable);
         }
-        return books.stream().map(BookResponse::from).toList();
+        return PageResponse.from(page.map(BookResponse::from));
     }
 
     @Transactional(readOnly = true)

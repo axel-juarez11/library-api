@@ -2,14 +2,16 @@ package com.axel.libraryapi.controller;
 
 import com.axel.libraryapi.dto.BookRequest;
 import com.axel.libraryapi.dto.BookResponse;
+import com.axel.libraryapi.dto.PageResponse;
 import com.axel.libraryapi.service.BookService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/books")
@@ -24,9 +26,10 @@ public class BookController {
     }
 
     @GetMapping
-    public List<BookResponse> findAll(@RequestParam(required = false) String author,
-                                      @RequestParam(required = false) String category){
-        return bookService.findAll(author, category);
+    public PageResponse<BookResponse> findAll(@RequestParam(required = false) String author,
+                                              @RequestParam(required = false) String category,
+                                              @PageableDefault(size = 20, sort = "title") Pageable pageable) {
+        return bookService.findAll(author, category, pageable);
     }
 
     @GetMapping("/{id}")
