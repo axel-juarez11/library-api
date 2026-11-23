@@ -14,6 +14,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Pageable;
+import com.axel.libraryapi.dto.PageResponse;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -147,37 +151,47 @@ class BookServiceTest {
 
         verify(bookRepository, never()).delete(any());
     }
-    
+
+    // findAll
     @Test
     void findAll_withAuthor_usesAuthorFilter(){
-        when(bookRepository.findByAuthorContainingIgnoreCase("tolkien")).thenReturn(List.of(book));
+        Pageable pageable = PageRequest.of(0, 20);
+        when(bookRepository.findByAuthorContainingIgnoreCase("tolkien", pageable))
+                .thenReturn(new PageImpl<>(List.of(book), pageable, 1));
 
-        List<BookResponse> result = bookService.findAll("tolkien", null);
+        PageResponse<BookResponse> result = bookService.findAll("tolkien", null, pageable);
 
-        assertThat(result).hasSize(1);
-        assertThat(result.get(0).author()).isEqualTo("J.R.R. Tolkien");
-        verify(bookRepository).findByAuthorContainingIgnoreCase("tolkien");
-        verify(bookRepository, never()).findAll();
+        assertThat(result.content()).hasSize(1);
+        assertThat(result.content().get(0).author()).isEqualTo("J.R.R. Tolkien");
+        assertThat(result.totalElements()).isEqualTo(1);
+        verify(bookRepository).findByAuthorContainingIgnoreCase("tolkien", pageable);
+        verify(bookRepository, never()).findAll(any(Pageable.class));
     }
 
     @Test
     void findAll_withCategory_usesCategoryFilter(){
-        when(bookRepository.findByCategoryIgnoreCase("fantasía")).thenReturn(List.of(book));
+        Pageable pageable = PageRequest.of(0, 20);
+        when(bookRepository.findByCategoryIgnoreCase("fantasía", pageable))
+                .thenReturn(new PageImpl<>(List.of(book), pageable, 1));
 
-        List<BookResponse> result = bookService.findAll(null, "fantasía");
+        PageResponse<BookResponse> result = bookService.findAll(null, "fantasía", pageable);
 
-        assertThat(result).hasSize(1);
-        verify(bookRepository).findByCategoryIgnoreCase("fantasía");
-        verify(bookRepository, never()).findAll();
+        assertThat(result.content()).hasSize(1);
+        verify(bookRepository).findByCategoryIgnoreCase("fantasía", pageable);
+        verify(bookRepository, never()).findAll(any(Pageable.class));
     }
 
     @Test
     void findAll_withoutFilters_returnsAll(){
-        when(bookRepository.findAll()).thenReturn(List.of(book));
+        Pageable pageable = PageRequest.of(0, 20);
+        when(bookRepository.findAll(pageable))
+                .thenReturn(new PageImpl<>(List.of(book), pageable, 1));
 
-        List<BookResponse> result = bookService.findAll(null, null);
+        PageResponse<BookResponse> result = bookService.findAll(null, null, pageable);
 
-        assertThat(result).hasSize(1);
-        verify(bookRepository).findAll();
+        assertThat(result.content()).hasSize(1);
+        assertThat(result.page()).isEqualTo(0);
+        assertThat(result.totalPages()).isEqualTo(1);
+        verify(bookRepository).findAll(pageable);
     }
 }
