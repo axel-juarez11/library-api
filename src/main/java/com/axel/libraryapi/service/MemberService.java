@@ -2,6 +2,7 @@ package com.axel.libraryapi.service;
 
 import com.axel.libraryapi.dto.MemberRequest;
 import com.axel.libraryapi.dto.MemberResponse;
+import com.axel.libraryapi.dto.PageResponse;
 import com.axel.libraryapi.entity.Member;
 import com.axel.libraryapi.exception.BusinessRuleException;
 import com.axel.libraryapi.exception.DuplicateResourceException;
@@ -9,12 +10,13 @@ import com.axel.libraryapi.exception.ResourceNotFoundException;
 import com.axel.libraryapi.repository.LoanRepository;
 import com.axel.libraryapi.repository.MemberRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.LocalDate;
-import java.util.List;
 
 
 @Service
@@ -42,11 +44,11 @@ public class MemberService {
     }
 
     @Transactional(readOnly = true)
-    public List<MemberResponse> findAll(Boolean active){
-        List<Member> members = (active == null)
-                ? memberRepository.findAll()
-                : memberRepository.findByActive(active);
-        return members.stream().map(MemberResponse::from).toList();
+    public PageResponse<MemberResponse> findAll(Boolean active, Pageable pageable){
+        Page<Member> members = (active == null)
+                ? memberRepository.findAll(pageable)
+                : memberRepository.findByActive(active, pageable);
+        return PageResponse.from(members.map(MemberResponse::from));
     }
 
     @Transactional(readOnly = true)
