@@ -1,6 +1,8 @@
 package com.axel.libraryapi.repository;
 
 import com.axel.libraryapi.entity.Fine;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
@@ -10,11 +12,11 @@ public interface FineRepository extends JpaRepository<Fine, Long> {
 
     @Override
     @EntityGraph(attributePaths = {"loan", "loan.book", "loan.member"})
-    List<Fine> findAll();
+    Page<Fine> findAll(Pageable pageable);
 
     @EntityGraph(attributePaths = {"loan", "loan.book", "loan.member"})
-    List<Fine> findByPaid(boolean paid);
+    Page<Fine> findByPaid(boolean paid, Pageable pageable);
 
     @EntityGraph(attributePaths = {"loan", "loan.book", "loan.member"})
-    List<Fine> findByLoanMemberIdOrderByCreatedAtDesc(Long memberId);
+    Page<Fine> findByLoanMemberId(Long memberId, Pageable pageable);
 }

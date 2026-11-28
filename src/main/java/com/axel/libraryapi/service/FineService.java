@@ -1,6 +1,7 @@
 package com.axel.libraryapi.service;
 
 import com.axel.libraryapi.dto.FineResponse;
+import com.axel.libraryapi.dto.PageResponse;
 import com.axel.libraryapi.entity.Fine;
 import com.axel.libraryapi.entity.Loan;
 import com.axel.libraryapi.exception.BusinessRuleException;
@@ -9,6 +10,8 @@ import com.axel.libraryapi.repository.FineRepository;
 import com.axel.libraryapi.repository.MemberRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
@@ -48,21 +51,19 @@ public class FineService {
     }
 
     @Transactional(readOnly = true)
-    public List<FineResponse> findAll(Boolean paid) {
+    public PageResponse<FineResponse> findAll(Boolean paid, Pageable pageable) {
         LocalDate today = LocalDate.now(clock);
-        List<Fine> fines = (paid == null) ? fineRepository.findAll() : fineRepository.findByPaid(paid);
-        return fines.stream().map(f -> FineResponse.from(f, today)).toList();
+        Page<Fine> fines = (paid == null) ? fineRepository.findAll(pageable) : fineRepository.findByPaid(paid, pageable);
+        return PageResponse.from(fines.map(f -> FineResponse.from(f, today)));
     }
 
     @Transactional(readOnly = true)
-    public List<FineResponse> findByMember(Long memberId) {
+    public PageResponse<FineResponse> findByMember(Long memberId, Pageable pageable) {
         if (!memberRepository.existsById(memberId)) {
             throw new ResourceNotFoundException("Socio no encontrado con id " + memberId);
         }
         LocalDate today = LocalDate.now(clock);
-        return fineRepository.findByLoanMemberIdOrderByCreatedAtDesc(memberId).stream()
-                .map(f -> FineResponse.from(f, today))
-                .toList();
+        return PageResponse.from(fineRepository.findByLoanMemberId(memberId, pageable).map(f -> FineResponse.from(f, today)));
     }
 
     @Transactional

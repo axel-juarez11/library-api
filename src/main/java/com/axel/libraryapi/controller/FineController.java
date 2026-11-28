@@ -1,10 +1,14 @@
 package com.axel.libraryapi.controller;
 
 import com.axel.libraryapi.dto.FineResponse;
+import com.axel.libraryapi.dto.PageResponse;
 import com.axel.libraryapi.service.FineService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
@@ -18,14 +22,16 @@ public class FineController {
     @Operation(summary = "Listar todas las multas",
     description = "Filtro opcional por estado de pago: paid=true (pagadas) o paid=false (pendientes)")
     @GetMapping("/api/fines")
-    public List<FineResponse> findAll(@RequestParam(required = false) Boolean paid) {
-        return fineService.findAll(paid);
+    public PageResponse<FineResponse> findAll(@RequestParam(required = false) Boolean paid,
+                                              @PageableDefault(sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        return fineService.findAll(paid, pageable);
     }
 
     @Operation(summary = "Listar las multas de un socio")
     @GetMapping("/api/members/{id}/fines")
-    public List<FineResponse> findByMember(@PathVariable Long id) {
-        return fineService.findByMember(id);
+    public PageResponse<FineResponse> findByMember(@PathVariable Long id,
+                                                   @PageableDefault(sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        return fineService.findByMember(id, pageable);
     }
 
     @Operation(summary = "Pagar una multa",
